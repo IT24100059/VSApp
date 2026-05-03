@@ -6,7 +6,7 @@ const billSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-    }, // <-- NEW LINE
+    }, 
     serviceRecordId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ServiceRecord",
