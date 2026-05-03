@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { useRouter } from "expo-router"; // 1. Imported Expo Router
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,6 +14,8 @@ import {
 import { BASE_URL } from "../config";
 
 export default function DashboardScreen() {
+  const router = useRouter(); // 2. Initialized router
+
   const [timeFilter, setTimeFilter] = useState("month"); // 'all', 'week', 'month'
 
   // --- LIVE DATA STATES ---
@@ -72,20 +75,19 @@ export default function DashboardScreen() {
   const activeBills = getFilteredBills();
 
   // --- KPI CALCULATIONS ---
-  const vehicleCategories = vehicles.reduce((acc, v) => {
-    const make = v.makeModel ? v.makeModel.split(" ")[0] : "Unknown"; // Extract roughly the make
+  const vehicleCategories = vehicles.reduce((acc: any, v: any) => {
+    const make = v.makeModel ? v.makeModel.split(" ")[0] : "Unknown"; 
     acc[make] = (acc[make] || 0) + 1;
     return acc;
   }, {});
 
   const lowStockItems = inventory.filter(
-    (item) => item.quantityInStock <= item.reorderLevel,
+    (item: any) => item.quantityInStock <= item.reorderLevel,
   );
-  const todaysServices = bookings.filter((b) => b.date === todayStr);
+  const todaysServices = bookings.filter((b: any) => b.date === todayStr);
 
   // --- FINANCIAL CALCULATIONS ---
-  // Note: Your dummy data used "Finalized" but our DB uses "Finalized" and "Draft". We only count Finalized revenue.
-  const finalBills = activeBills.filter((b) => b.status === "Finalized");
+  const finalBills = activeBills.filter((b: any) => b.status === "Finalized");
   const totalServiceRevenue = finalBills.reduce(
     (sum, b) => sum + b.serviceTotal,
     0,
@@ -100,7 +102,7 @@ export default function DashboardScreen() {
   );
 
   // --- TOP SPENDERS ---
-  const customerSpending = finalBills.reduce((acc, b) => {
+  const customerSpending = finalBills.reduce((acc: any, b: any) => {
     const key = `${b.customerName}-${b.vehicleNumber}`;
     if (!acc[key]) {
       acc[key] = {
@@ -116,8 +118,34 @@ export default function DashboardScreen() {
   }, {});
 
   const spendingArray = Object.values(customerSpending)
-    .sort((a, b) => b.totalSpent - a.totalSpent)
+    .sort((a: any, b: any) => b.totalSpent - a.totalSpent)
     .slice(0, 5); // Show top 5
+
+  // 3. Admin Logout Function
+  const handleAdminLogout = async () => {
+    Alert.alert(
+      "Admin Logout",
+      "Are you sure you want to securely log out of the Admin Dashboard?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes, Logout",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Clear both the token and the role for maximum security
+              await AsyncStorage.removeItem("userToken");
+              await AsyncStorage.removeItem("userRole"); 
+              
+              router.replace("/"); // Route back to the main login index
+            } catch (error) {
+              console.error("Admin logout error: ", error);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   if (loading) {
     return (
@@ -140,7 +168,13 @@ export default function DashboardScreen() {
       style={styles.container}
       contentContainerStyle={{ paddingBottom: 40 }}
     >
-      <Text style={styles.header}>📊 Executive Dashboard</Text>
+      {/* 4. Updated Header with Inline Logout Button */}
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>📊 Executive Dashboard</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleAdminLogout}>
+          <Text style={styles.logoutBtnText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* --- ROW 1: ALERTS & KPIS --- */}
       <View style={styles.card}>
@@ -150,7 +184,7 @@ export default function DashboardScreen() {
           Vehicles by Make:
         </Text>
         <View style={styles.chipContainer}>
-          {Object.entries(vehicleCategories).map(([make, count]) => (
+          {Object.entries(vehicleCategories).map(([make, count]: any) => (
             <Text key={make} style={styles.chip}>
               {make}: {count}
             </Text>
@@ -172,7 +206,7 @@ export default function DashboardScreen() {
             ✅ All inventory levels good!
           </Text>
         ) : (
-          lowStockItems.map((item) => (
+          lowStockItems.map((item: any) => (
             <View key={item._id} style={styles.alertRow}>
               <Text style={{ fontWeight: "bold", flex: 1 }}>{item.name}</Text>
               <Text style={{ color: "#dc2626", fontWeight: "bold" }}>
@@ -330,7 +364,7 @@ export default function DashboardScreen() {
           No finalized invoices to calculate VIPs.
         </Text>
       ) : (
-        spendingArray.map((data, idx) => (
+        spendingArray.map((data: any, idx: number) => (
           <View key={idx} style={styles.vipCard}>
             <View>
               <Text
@@ -368,7 +402,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
   },
-  header: { fontSize: 24, fontWeight: "bold", color: "#333", marginBottom: 20 },
+  // 5. New styles for the top header row and logout button
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  header: { 
+    fontSize: 24, 
+    fontWeight: "bold", 
+    color: "#333" 
+  },
+  logoutBtn: {
+    backgroundColor: "#ef4444", // Red color for exit action
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+  },
+  logoutBtnText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  // --- Original Styles Below ---
   card: {
     backgroundColor: "#fff",
     padding: 20,

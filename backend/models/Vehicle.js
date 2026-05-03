@@ -7,7 +7,7 @@ const vehicleSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    plate: { type: String, required: true },
+    plate: { type: String, required: true, unique: true },
     makeModel: { type: String, required: true },
     photo: { type: String, default: null },
   },

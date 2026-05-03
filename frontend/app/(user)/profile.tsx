@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { useRouter } from "expo-router"; // 1. Added Expo Router hook
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,9 +13,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { BASE_URL } from "../config"; // Adjust path if your config is somewhere else
+import { BASE_URL } from "../config";
 
 export default function UserProfileScreen() {
+  const router = useRouter(); // 2. Initialized the router
+
   const [user, setUser] = useState({ name: "Loading...", nic: "200212345678" });
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +25,6 @@ export default function UserProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  // Fetch the user's data as soon as the screen loads
   useEffect(() => {
     fetchProfileData();
   }, []);
@@ -48,7 +50,6 @@ export default function UserProfileScreen() {
   };
 
   const handleUpdate = async () => {
-    // Sri Lankan Phone Validation
     const phoneRegex = /^0\d{9}$/;
     if (!phoneRegex.test(phone)) {
       Alert.alert(
@@ -61,9 +62,7 @@ export default function UserProfileScreen() {
     setUpdating(true);
     try {
       const token = await AsyncStorage.getItem("userToken");
-
-      // Create a payload. Only send password if they typed a new one!
-      const payload = { phone };
+      const payload: any = { phone };
       if (password) payload.password = password;
 
       await axios.put(`${BASE_URL}/auth/profile`, payload, {
@@ -71,13 +70,41 @@ export default function UserProfileScreen() {
       });
 
       Alert.alert("Success", "Profile updated successfully!");
-      setPassword(""); // Clear the password box after saving
+      setPassword(""); 
     } catch (error) {
       console.error(error);
       Alert.alert("Error", "Failed to update profile.");
     } finally {
       setUpdating(false);
     }
+  };
+
+  // 3. The complete Logout Function
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Yes, Logout",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // ...
+await AsyncStorage.removeItem("userToken"); 
+router.replace("/"); // <-- The single forward slash is the route for index.tsx
+// ... 
+            } catch (error) {
+              console.error("Error logging out: ", error);
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (loading) {
@@ -144,6 +171,16 @@ export default function UserProfileScreen() {
             <Text style={styles.btnText}>Update Profile</Text>
           )}
         </TouchableOpacity>
+
+        {/* 4. The physical Logout Button */}
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={handleLogout}
+          disabled={updating}
+        >
+          <Text style={styles.btnText}>Logout</Text>
+        </TouchableOpacity>
+
       </View>
     </KeyboardAvoidingView>
   );
@@ -180,6 +217,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     marginTop: 10,
+  },
+  logoutBtn: {
+    backgroundColor: "#ef4444", 
+    padding: 15,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 15,
   },
   btnText: { color: "white", fontWeight: "bold", fontSize: 16 },
 });
